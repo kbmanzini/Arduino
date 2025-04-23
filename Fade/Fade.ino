@@ -1,47 +1,60 @@
-/*
+// Pin assignments for each LED color
+// Blue -> 9, Red -> 10, Green -> 11, Yellow -> 6 (all PWM-capable pins)
+const int ledPins[] = {9, 10, 11, 6}; 
+const int numLeds = 4;  // Number of LEDs
 
-  Fade
+// Track current brightness of each LED (0–255)
+int brightness[] = {0, 0, 0, 0};
 
-  This example shows how to fade an LED on pin 9 using the analogWrite()
+// Amount to change brightness each step (positive to fade in, negative to fade out)
+int fadeAmount[] = {5, 5, 5, 5};
 
-  function.
+// Track the last time each LED was updated
+unsigned long previousMillis[] = {0, 0, 0, 0};
 
+// Time intervals (in milliseconds) between brightness updates for each LED
+// This gives each LED a different fade speed
+unsigned int fadeIntervals[] = {30, 50, 70, 90};
 
-  The analogWrite() function uses PWM, so if you want to change the pin you're
-  using, be sure to use another PWM capable pin. On most Arduino, the PWM pins
-  are identified with a "~" sign, like ~3, ~5, ~6, ~9, ~10 and ~11.
+// Current LED index to fade (we start with the first LED: Blue)
+int currentLedIndex = 0;
 
-
-  This example code is in the public domain.
-
-  https://docs.arduino.cc/built-in-examples/basics/Fade/
-*/
-
-int blueLed = 9;         // the PWM pin the LED is attached to
-int redLed = 10;
-int brightness = 0;  // how bright the LED is
-int fadeAmount = 5;  // how many points to fade the LED by
-
-// the setup routine runs once when you press reset:
 void setup() {
-  // declare pin 9 to be an output:
-  pinMode(blueLed, OUTPUT);
-  pinMode(redLed, OUTPUT);
-}
-
-// the loop routine runs over and over again forever:
-void loop() {
-  // set the brightness of pin 9:
-  analogWrite(blueLed, brightness);
-  analogWrite(redLed, brightness);
-
-  // change the brightness for next time through the loop:
-  brightness = brightness + fadeAmount;
-
-  // reverse the direction of the fading at the ends of the fade:
-  if (brightness <= 0 || brightness >= 255) {
-    fadeAmount = -fadeAmount;
+  // Set each LED pin as an OUTPUT
+  for (int i = 0; i < numLeds; i++) {
+    pinMode(ledPins[i], OUTPUT);  // All LEDs are PWM-capable
   }
-  // wait for 30 milliseconds to see the dimming effect
-  delay(30);
 }
+
+void loop() {
+  unsigned long currentMillis = millis();  // Get the current time in milliseconds
+
+  // Only update the current LED if its interval has passed
+  if (currentMillis - previousMillis[currentLedIndex] >= fadeIntervals[currentLedIndex]) {
+    previousMillis[currentLedIndex] = currentMillis;  // Update the last time this LED was updated
+
+    // Fade in the current LED by increasing its brightness
+    brightness[currentLedIndex] += fadeAmount[currentLedIndex]; 
+
+    // If brightness reaches either extreme (0 or 255), reverse the fade direction
+    if (brightness[currentLedIndex] >= 255) {
+      brightness[currentLedIndex] = 255;  // Ensure it doesn't go over 255
+      fadeAmount[currentLedIndex] = 0;  // Stop fading once it's fully bright
+    }
+    
+    // Apply the new brightness using PWM (for Blue, Red, Green, Yellow)
+    analogWrite(ledPins[currentLedIndex], brightness[currentLedIndex]);
+
+    // If the current LED is fully bright (255), move to the next LED
+    if (brightness[currentLedIndex] == 255) {
+      // Move to the next LED in the sequence (Blue -> Red -> Green -> Yellow)
+      currentLedIndex++;
+      
+      // If we reach the last LED, stop the fading (or reset to the first LED if desired)
+      if (currentLedIndex >= numLeds) {
+        currentLedIndex = numLeds;  // Stop at the last LED
+      }
+    }
+  }
+}
+
